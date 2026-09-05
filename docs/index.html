@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Content Opportunity Scoring — FlyRank ML Capstone</title>
+<meta name="description" content="A public-safe research artifact on transparent content opportunity scoring and leakage-aware validation.">
+<style>
+:root{--bg:#07111f;--panel:#0d1a2b;--panel2:#102239;--text:#eaf2fb;--muted:#9fb2c7;--line:#20344c;--accent:#67d5ff;--accent2:#9ef0c0;--warn:#ffd18a;--max:1080px}
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0%,#112b45 0,transparent 38%),var(--bg);color:var(--text);font:16px/1.65 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
+a{color:var(--accent)} .wrap{max-width:var(--max);margin:auto;padding:0 24px}
+header{padding:72px 0 42px;border-bottom:1px solid var(--line)} .eyebrow{letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-size:12px;font-weight:700}
+h1{font-size:clamp(38px,6vw,70px);line-height:1.02;margin:14px 0 20px;max-width:850px} h2{font-size:28px;margin:0 0 18px} h3{font-size:19px;margin-top:28px}
+.lead{font-size:20px;color:#cbd8e6;max-width:850px} .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px} .pill{border:1px solid var(--line);background:#0b1727;padding:7px 11px;border-radius:999px;color:var(--muted);font-size:13px}
+section{padding:54px 0;border-bottom:1px solid var(--line)} .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px} .card{background:linear-gradient(180deg,var(--panel),#0a1726);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 12px 40px #0002} .span4{grid-column:span 4} .span6{grid-column:span 6} .span8{grid-column:span 8} .span12{grid-column:span 12}
+.kpi{font-size:38px;font-weight:800;line-height:1} .klabel{color:var(--muted);margin-top:8px;font-size:13px}
+table{width:100%;border-collapse:collapse} th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left} th{color:var(--muted);font-weight:600}
+.callout{border-left:3px solid var(--accent);padding:16px 18px;background:#0b1b2d;border-radius:0 12px 12px 0} .warning{border-left-color:var(--warn)} .quote{font-size:24px;line-height:1.35;color:#d9e7f4}
+.bar{fill:#67d5ff22;stroke:#67d5ff;stroke-width:1.5} .barlabel{fill:#c9d6e4;font:12px ui-sans-serif} .barvalue{fill:#eaf2fb;font:700 12px ui-sans-serif}
+ol li{margin:10px 0} footer{padding:40px 0 70px;color:var(--muted);font-size:14px}
+@media(max-width:760px){.span4,.span6,.span8{grid-column:span 12} header{padding-top:48px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<div class="eyebrow">FlyRank ML Internship · Week 8 · Research Artifact</div>
+<h1>Content Opportunity Scoring for Search-Driven Content</h1>
+<p class="lead">A transparent, leakage-aware workflow for turning observable search and content signals into a ranked human-review queue.</p>
+<div class="meta"><span class="pill">Author: Hassan Elnagar</span><span class="pill">Lane: Refresh / Content Opportunity Scoring</span><span class="pill">Decision-support, not causal proof</span></div>
+</div></header>
+
+<main class="wrap">
+<section><div class="grid">
+<div class="card span4"><div class="kpi">71,667</div><div class="klabel">eligible pages ranked</div></div>
+<div class="card span4"><div class="kpi">24.47%</div><div class="klabel">eligibility rate after ≥20 average impressions</div></div>
+<div class="card span4"><div class="kpi">4</div><div class="klabel">signals in the transparent baseline</div></div>
+</div></section>
+
+<section><h2>Abstract</h2><p>Can observable search-performance and content signals be combined into a transparent ranking that helps a content team prioritize pages for review? I built a rule-based content opportunity score using content age, CTR, impressions, and average position from the FlyRank internship warehouse. The resulting queue ranks 71,667 eligible pages and attaches reason codes, review confidence, and a human-review action. A supervised model experiment was also tested, but its target was derived from historical CTR, making clicks and impressions target-related inputs; the validation audit therefore invalidates the 1.000 Precision@20 result as a publishable model claim. The final artifact keeps the transparent baseline as the safer decision-support mechanism and turns its ranked output into an auditable action playbook.</p></section>
+
+<section><h2>1 · Problem statement</h2>
+<p>Content teams need a practical way to decide which pages deserve attention first. A binary “refresh / do not refresh” rule loses ranking information; a transparent score can instead create a queue that humans can inspect, challenge, and act on.</p>
+<div class="callout"><strong>Research question:</strong> Can a transparent scoring rule prioritize content pages for refresh or optimization review using observable search-performance and content signals?</div>
+<p>The output is a ranked queue. It does <strong>not</strong> claim that a high score causes a refresh to improve traffic, clicks, or rankings.</p></section>
+
+<section><h2>2 · Data</h2>
+<div class="grid">
+<div class="card span4"><div class="kpi">519,606</div><div class="klabel">dim_content rows</div></div>
+<div class="card span4"><div class="kpi">78.8M</div><div class="klabel">daily performance rows</div></div>
+<div class="card span4"><div class="kpi">2025-01 → 2026-06</div><div class="klabel">observed daily coverage</div></div>
+</div>
+<p>The project uses the <code>FlyRank/internship-warehouse</code> release. The daily performance table covers 2025-01-27 through 2026-06-30. The final content-level feature table contains 292,912 pages; requiring average impressions ≥20 leaves 71,667 eligible pages.</p>
+<h3>Final baseline signals</h3>
+<table><tr><th>Signal</th><th>Role</th></tr>
+<tr><td>Content age</td><td>Older content receives higher review priority.</td></tr>
+<tr><td>CTR</td><td>Lower CTR receives higher review priority.</td></tr>
+<tr><td>Impressions</td><td>Higher visibility increases the potential value of review.</td></tr>
+<tr><td>Average position</td><td>Better ranking position increases optimization opportunity.</td></tr>
+</table>
+<p>Identifiers are not predictors. Deleted/unpublished content is excluded, and the baseline does not use future outcomes or a target label.</p>
+</section>
+
+<section><h2>3 · Methodology</h2>
+<div class="card"><p class="quote">Baseline score = 0.30 × age + 0.30 × low CTR + 0.30 × impressions + 0.10 × near-page-one</p></div>
+<p>Each signal is normalized. The baseline is deliberately simple and interpretable: the score tells a reviewer <em>why</em> a page surfaced, while reason codes translate signal patterns into an actionable review path.</p>
+<h3>Modeling experiment — and why it was rejected</h3>
+<p>Week 5 tested Logistic Regression and Random Forest using a binary target defined from the top 20% of historical CTR. CTR itself was removed from the feature set, but clicks and impressions remained as predictors even though they are components of CTR. Both models reported Precision@20 = 1.000.</p>
+<div class="callout warning"><strong>Validation finding:</strong> the Week-6 audit identified this target relationship as a leakage risk. Therefore the 1.000 model result is retained only as a diagnostic finding, not as evidence of deployable model quality. The transparent baseline remains the final action engine.</div>
+</section>
+
+<section><h2>4 · Results</h2>
+<h3>Diagnostic comparison</h3>
+<table><tr><th>Method</th><th>Precision@20</th><th>Interpretation</th></tr>
+<tr><td>Week-4 transparent baseline</td><td>0.375</td><td>Valid prioritization baseline</td></tr>
+<tr><td>Logistic Regression</td><td>1.000</td><td>Diagnostic only — target-related leakage risk</td></tr>
+<tr><td>Random Forest</td><td>1.000</td><td>Diagnostic only — target-related leakage risk</td></tr>
+</table>
+<p>The figures above are <strong>not presented as a fair final model-vs-baseline benchmark</strong>: the supervised target was built from historical CTR, and the baseline evaluation was not produced under an identical leakage-safe test definition. The correct conclusion is that the first model experiment looked unrealistically strong and failed the methodology audit.</p>
+<h3>Final action queue</h3>
+<svg viewBox="0 0 760 280" width="100%" role="img" aria-label="Action queue distribution">
+<text x="0" y="58" class="barlabel">SUPPORT_PAGE_ONE</text>
+<rect x="180" y="40" width="520.0" height="28" rx="8" class="bar"/>
+<text x="710.0" y="59" class="barvalue">39,267</text><text x="0" y="106" class="barlabel">MONITOR</text>
+<rect x="180" y="88" width="359.2" height="28" rx="8" class="bar"/>
+<text x="549.2" y="107" class="barvalue">27,123</text><text x="0" y="154" class="barlabel">HOLD_FOR_REVIEW</text>
+<rect x="180" y="136" width="42.2" height="28" rx="8" class="bar"/>
+<text x="232.2" y="155" class="barvalue">3,188</text><text x="0" y="202" class="barlabel">REFRESH_CONTENT</text>
+<rect x="180" y="184" width="19.5" height="28" rx="8" class="bar"/>
+<text x="209.5" y="203" class="barvalue">1,469</text><text x="0" y="250" class="barlabel">IMPROVE_SNIPPET</text>
+<rect x="180" y="232" width="8.2" height="28" rx="8" class="bar"/>
+<text x="198.2" y="251" class="barvalue">620</text>
+</svg>
+<p>The largest groups are <code>SUPPORT_PAGE_ONE</code> (39,267) and <code>MONITOR</code> (27,123). The queue marks 1,469 pages for <code>REFRESH_CONTENT</code> and 620 for <code>IMPROVE_SNIPPET</code>.</p>
+</section>
+
+<section><h2>5 · Limitations & honest framing</h2>
+<ul>
+<li>The queue is a prioritization and review aid, not a causal estimator.</li>
+<li>A high score does not prove that refreshing content will improve traffic, clicks, or rankings.</li>
+<li>Content-level aggregation can hide query-level differences.</li>
+<li>The reporting window and available warehouse fields constrain inference.</li>
+<li>Missing or incomplete metadata can reduce recommendation confidence.</li>
+<li>Historical metadata does not guarantee a perfect point-in-time snapshot for every decision.</li>
+<li>The supervised experiment used a proxy target tied to historical CTR, so its high score should not be treated as generalization evidence.</li>
+</ul></section>
+
+<section><h2>6 · Ranked recommendations</h2>
+<ol>
+<li><strong>Refresh content:</strong> prioritize visible pages showing age/decay signals and weak engagement, then verify intent and current quality.</li>
+<li><strong>Improve the snippet:</strong> when visibility is high but CTR is weak, inspect title, description, SERP features, and intent before editing content.</li>
+<li><strong>Support page-one / striking-distance pages:</strong> consider authority, internal linking, and ranking context before rewriting.</li>
+<li><strong>Monitor low-volume pages:</strong> avoid over-interpreting weak evidence.</li>
+<li><strong>Hold for review:</strong> when available signals do not support a confident action.</li>
+</ol>
+<div class="callout"><strong>Operational rule:</strong> Score → Rank → Explain → Human Review → Decide → Measure.</div>
+<p>No action should be executed solely because a page received a high queue rank. The Week-7 playbook explicitly treats the queue as non-production decision support.</p>
+</section>
+
+<section><h2>7 · Reproducibility</h2>
+<p>The analysis is organized in the repository's <code>work/notebooks/</code> path, with the capstone notebook mirroring this paper. The final action queue is exported as <code>work/outputs/content_action_queue.csv</code>; the action summary is <code>work/outputs/content_action_summary.csv</code>; and the queue chart is <code>work/figures/action_queue_by_action.png</code>.</p>
+<p>For the supervised experiment, the random seed used in the Week-5 split and models is <code>42</code>. The validation audit explicitly compares random and grouped splits and documents the leakage concern.</p>
+</section>
+
+<section><h2>8 · Artifacts</h2>
+<div class="grid">
+<div class="card span6"><h3>Ranked queue</h3><p>71,667 eligible pages with rank, action, reason code, score, review confidence, and supporting signals.</p></div>
+<div class="card span6"><h3>Action summary</h3><p>Counts plus mean/median baseline score by recommended action.</p></div>
+</div>
+</section>
+
+<section><h2>9 · Acknowledgments & data credit</h2>
+<p>Built on the <strong>FlyRank ML Internship dataset</strong> — <a href="https://flyrank.ai">flyrank.ai</a>.</p></section>
+</main>
+
+<footer><div class="wrap">FlyRank ML Internship · Content Opportunity Scoring · Public-safe research artifact · Last updated September 2026</div></footer>
+</body></html>
